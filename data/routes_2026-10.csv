@@ -1,0 +1,4 @@
+run_time_ist,weekday,source,route_name,distance_km,live_min,typical_min,delay_min,ratio,avg_speed_kmh,heavy_share,unknown_share,status,error_msg
+2026-10-02 09:52:30,Friday,mapbox,Jadavpur_Stn_to_8B,1.14,3.29,4.05,-0.76,0.812,20.8,0.0,1.0,ok,
+2026-10-02 09:52:30,Friday,mapbox,8B_to_Sulekha,0.71,2.26,2.88,-0.62,0.785,18.8,0.0,1.0,ok,
+2026-10-02 09:52:30,Friday,mapbox,Sulekha_to_8B,0.79,2.34,2.93,-0.59,0.799,20.3,0.0,1.0,ok,

@@ -1,0 +1,24 @@
+name: Log Traffic
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 minutes
+  workflow_dispatch:          # lets you trigger it manually too
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - run: python traffic_snapshot.py
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+      - run: |
+          git config user.name "traffic-bot"
+          git config user.email "bot@example.com"
+          git add jadavpur_traffic_log.csv
+          git commit -m "log $(date)" || echo "no changes"
+          git push
