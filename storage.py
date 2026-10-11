@@ -5,12 +5,11 @@ import config
 def save(kind, rows):
     if not rows:
         return
-
     month = rows[0]["run_time_ist"][:7]  
     os.makedirs(config.DATA_DIR, exist_ok=True)
     path = os.path.join(config.DATA_DIR, f"{kind}_{month}.csv")
 
-    columns = list(rows[0].keys())
+    columns = list(dict.fromkeys(key for row in rows for key in row))  # every column used by any row
 
     if os.path.exists(path) and os.path.getsize(path) > 0:
         with open(path, newline="", encoding="utf-8") as f:
@@ -27,12 +26,7 @@ def save(kind, rows):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def _upgrade_file(path, old_columns, new_columns):
-    """
-    When we add new columns later (e.g. weather), rewrite this month's file
-    with the extra columns. Old rows simply get empty cells for them.
-    """
     merged = old_columns + [c for c in new_columns if c not in old_columns]
     with open(path, newline="", encoding="utf-8") as f:
         old_rows = list(csv.DictReader(f))

@@ -11,14 +11,15 @@ def get_token():
         )
     return token
 
-def get_route(route, token):
+def get_route(route, token, with_shape=False):
     points = [route["start"], route["end"]]
     coords = ";".join(f"{p['lon']},{p['lat']}" for p in points)
 
     params = {
         "access_token": token,
         "overview": "full",                    
-        "annotations": "congestion,distance",  
+        "annotations": "congestion,distance",
+        "geometries": "geojson",  
     }
 
     try:
@@ -47,7 +48,7 @@ def get_route(route, token):
     live_s = r["duration"]
     typical_s = r.get("duration_typical") 
 
-    return {
+    result = {
         "distance_km": round(r["distance"] / 1000, 2),
         "live_min": round(live_s / 60, 2),
         "typical_min": round(typical_s / 60, 2) if typical_s else None,
@@ -55,3 +56,6 @@ def get_route(route, token):
         "heavy_share": round(heavy_m / total, 2),     
         "unknown_share": round(unknown_m / total, 2),  
     }
+    if with_shape:
+        result["shape"] = [(lat, lon) for lon, lat in r["geometry"]["coordinates"]]
+    return result
