@@ -1,0 +1,54 @@
+name: Code Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check installed dependencies
+        run: python -m pip check
+
+      - name: Compile Python files
+        run: python -m compileall -q .
+
+      - name: Run configuration smoke check
+        run: |
+          python - <<'PY'
+          import config
+          import context
+          import mongodb_storage
+
+          assert config.ROUTES, "No primary routes configured"
+          assert config.CANDIDATE_ROUTES, "No candidate routes configured"
+          assert config.CANDIDATE_POINTS, "No candidate points configured"
+          assert config.TIMEZONE == "Asia/Kolkata"
+          assert set(mongodb_storage.COLLECTIONS) == {
+              "routes",
+              "coverage_routes",
+              "coverage_points",
+              "incidents",
+              "incident_runs",
+          }
+          run_context = context.get_run_context()
+          assert run_context["run_time_ist"]
+          assert run_context["weekday"]
+          print("Configuration smoke check passed.")
+          PY

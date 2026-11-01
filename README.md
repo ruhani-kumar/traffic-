@@ -100,3 +100,17 @@ db.coverage_route_snapshots.find({
 
 This makes it possible to study hourly congestion patterns, compare providers, calculate average
 and peak travel times, and correlate traffic with incidents.
+
+## GitHub checks
+
+The `.github/workflows/ci.yml` workflow runs on every push and pull request. It:
+
+- Installs the dependencies from `requirements.txt`.
+- Checks that installed dependencies are consistent.
+- Compiles all Python files to catch syntax errors.
+- Imports the project configuration and verifies that routes, points, timezone, and MongoDB
+  collection mappings are present.
+
+These checks do not call Mapbox, TomTom, or MongoDB, so they do not require secrets and are safe
+to run on pull requests. The separate `Log Traffic` workflow uses the repository secrets and runs
+only on its hourly schedule or when manually triggered.
