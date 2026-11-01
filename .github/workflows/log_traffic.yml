@@ -1,8 +1,8 @@
 name: Log Traffic
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 minutes
-  workflow_dispatch:          # lets you trigger it manually too
+    - cron: '30 * * * *'      # hourly, at 00 minutes IST (GitHub cron uses UTC)
+  workflow_dispatch:
 
 jobs:
   log:
@@ -13,12 +13,14 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-      - run: python traffic_snapshot.py
+      - run: python check_coverage.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-      - run: |
-          git config user.name "traffic-bot"
-          git config user.email "bot@example.com"
-          git add data/
-          git commit -m "log $(date)" || echo "no changes"
-          git push
+          TOMTOM_KEY: ${{ secrets.TOMTOM_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+      - run: python check_incidents.py
+        env:
+          TOMTOM_KEY: ${{ secrets.TOMTOM_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}

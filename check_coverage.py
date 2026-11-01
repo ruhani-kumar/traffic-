@@ -6,6 +6,7 @@ import time
 import config
 import context
 import mapbox_api
+import mongodb_storage
 import storage
 import tomtom_api
 
@@ -68,6 +69,9 @@ def run_test():
     point_rows = [test_point(p, tomtom_key, ctx) for p in config.CANDIDATE_POINTS]
     storage.save("coverage_routes", route_rows)
     storage.save("coverage_points", point_rows)
+    saved_routes = mongodb_storage.save("coverage_routes", route_rows)
+    saved_points = mongodb_storage.save("coverage_points", point_rows)
+    print(f"Saved {saved_routes} route and {saved_points} point snapshot(s) to MongoDB.")
     print(f"\nTest run at {ctx['run_time_ist']} ({ctx['weekday']})\n")
     print(f"{'ROUTE':42} {'MB unknown':>10} {'MB live':>8} {'TT live':>8} {'TT usual':>8} {'TT empty':>8} {'TT jams':>7}")
     for r in route_rows:

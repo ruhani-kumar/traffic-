@@ -2,6 +2,7 @@ import time
 import config
 import context
 import mapbox_api
+import mongodb_storage
 import storage
 try:
     from dotenv import load_dotenv
@@ -50,6 +51,8 @@ def main():
     ctx = context.get_run_context()
     rows = [build_route_row(route, token, ctx) for route in config.ROUTES]
     storage.save("routes", rows)
+    saved = mongodb_storage.save("routes", rows)
+    print(f"Saved {saved} route snapshot(s) to MongoDB.")
     for r in rows:
         if r["status"] == "ok":
             print(f"[{r['run_time_ist']}] {r['route_name']}: live {r['live_min']} min, "
