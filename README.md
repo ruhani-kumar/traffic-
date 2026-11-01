@@ -1,6 +1,6 @@
-# Jadavpur Traffic Tracker
+# Traffic Tracker
 
-This project collects live traffic observations around Jadavpur, Kolkata, from Mapbox and TomTom.
+This project collects live traffic observations around Kolkata, from Mapbox and TomTom.
 It keeps the existing monthly CSV files as a local backup and can also persist observations to
 MongoDB Atlas for historical analysis.
 
