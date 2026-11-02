@@ -5,7 +5,7 @@ import config
 def save(kind, rows):
     if not rows:
         return
-    month = rows[0]["run_time_ist"][:7]  
+    month = rows[0]["run_time_ist"][:7]
     os.makedirs(config.DATA_DIR, exist_ok=True)
     path = os.path.join(config.DATA_DIR, f"{kind}_{month}.csv")
 

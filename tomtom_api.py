@@ -1,5 +1,6 @@
 import math
 import os
+import time
 import requests
 import config
 
@@ -14,6 +15,7 @@ def get_key():
     return key
 
 def _get_json(url, params):
+    started = time.perf_counter()
     try:
         res = requests.get(url, params=params, timeout=config.REQUEST_TIMEOUT)
     except requests.RequestException as e:
@@ -26,20 +28,23 @@ def _get_json(url, params):
         err = data.get("error") or data.get("detailedError") or {}
         msg = err.get("description") or err.get("message") or str(data)[:100]
         raise RuntimeError(f"TomTom error (HTTP {res.status_code}): {msg}")
-    return data
+    # How long TomTom took to answer, and how big the unpacked reply was.
+    size = {"response_ms": round((time.perf_counter() - started) * 1000),
+            "response_kb": round(len(res.content) / 1024, 2)}
+    return data, size
 
-def route(route, key, with_shape=False):
-    points = [route["start"], route["end"]]
+def route(route, key, with_shape=False, with_raw=False):
+    points = [route["start"]] + ([route["via"]] if route.get("via") else []) + [route["end"]]
     coords = ":".join(f"{p['lat']},{p['lon']}" for p in points)
 
     params = {
         "key": key,
-        "traffic": "true",                 
+        "traffic": "true",
         "travelMode": "car",
-        "computeTravelTimeFor": "all",     
-        "sectionType": "traffic",         
+        "computeTravelTimeFor": "all",
+        "sectionType": "traffic",
     }
-    data = _get_json(f"{ROUTING_URL}{coords}/json", params)
+    data, size = _get_json(f"{ROUTING_URL}{coords}/json", params)
     if not data.get("routes"):
         raise RuntimeError("TomTom returned no route")
 
@@ -56,15 +61,19 @@ def route(route, key, with_shape=False):
         "historic_min": minutes("historicTrafficTravelTimeInSeconds"),
         "no_traffic_min": minutes("noTrafficTravelTimeInSeconds"),
         "delay_min": round(s.get("trafficDelayInSeconds", 0) / 60, 2),
-        "jam_sections": len(jams),         
+        "jam_sections": len(jams),
+        **size,
     }
+    if with_raw:
+        result["raw"] = data
     if with_shape:
         result["shape"] = [(p["latitude"], p["longitude"]) for leg in r["legs"] for p in leg["points"]]
     return result
 
-def location_flow(point, key, with_shape=False):
+def location_flow(point, key, with_shape=False, with_raw=False):
     params = {"key": key, "point": f"{point['lat']},{point['lon']}", "unit": "KMPH"}
-    f = _get_json(FLOW_URL, params)["flowSegmentData"]
+    data, size = _get_json(FLOW_URL, params)
+    f = data["flowSegmentData"]
     road = [(c["latitude"], c["longitude"]) for c in f.get("coordinates", {}).get("coordinate", [])]
     snapped_m = _distance_to_road_m(point["lat"], point["lon"], road)
 
@@ -77,7 +86,10 @@ def location_flow(point, key, with_shape=False):
         "confidence": f.get("confidence"),
         "road_closed": f.get("roadClosure"),
         "snapped_m": round(snapped_m) if snapped_m is not None else None,
+        **size,
     }
+    if with_raw:
+        result["raw"] = data
     if with_shape:
         result["shape"] = road
     return result
@@ -90,6 +102,10 @@ INCIDENT_TYPES = {
 DELAY_SIZES = {0: "Unknown", 1: "Minor", 2: "Moderate", 3: "Major", 4: "Undefined"}
 
 def area_incidents(box, key):
+    return area_incidents_full(box, key)[0]
+
+def area_incidents_full(box, key):
+    # Returns (list of incidents, TomTom's raw reply, response size/time).
     fields = ("{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,"
               "events{description},startTime,endTime,from,to,length,delay,roadNumbers,"
               "probabilityOfOccurrence,lastReportTime}}}")
@@ -100,8 +116,9 @@ def area_incidents(box, key):
         "language": "en-GB",
         "timeValidityFilter": "present",
     }
+    data, size = _get_json(INCIDENTS_URL, params)
     incidents = []
-    for item in _get_json(INCIDENTS_URL, params).get("incidents", []):
+    for item in data.get("incidents", []):
         p = item.get("properties", {})
         geom = item.get("geometry", {})
         coords = geom.get("coordinates", [])
@@ -130,7 +147,7 @@ def area_incidents(box, key):
             "lon": round(mid[1], 5) if mid[1] is not None else None,
             "shape": shape,
         })
-    return incidents
+    return incidents, data, size
 
 def _distance_to_road_m(lat, lon, road):
     if not road:

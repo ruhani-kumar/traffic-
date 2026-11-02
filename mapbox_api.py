@@ -12,7 +12,7 @@ def get_token():
     return token
 
 def get_route(route, token, with_shape=False):
-    points = [route["start"], route["end"]]
+    points = [route["start"]] + ([route["via"]] if route.get("via") else []) + [route["end"]]
     coords = ";".join(f"{p['lon']},{p['lat']}" for p in points)
 
     params = {
@@ -21,6 +21,8 @@ def get_route(route, token, with_shape=False):
         "annotations": "congestion,distance",
         "geometries": "geojson",  
     }
+    if len(points) == 3:
+        params["waypoints"] = "0;2"   # via only steers the route; start and end are the real stops
 
     try:
         res = requests.get(BASE_URL + coords, params=params, timeout=config.REQUEST_TIMEOUT)
