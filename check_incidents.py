@@ -1,5 +1,6 @@
 import config
 import context
+import mongodb_storage
 import storage
 import tomtom_api
 
@@ -22,6 +23,8 @@ def main():
     print(f"\nIncidents at {ctx['run_time_ist']} ({ctx['weekday']}) "
           f"in box lat {box['min_lat']}-{box['max_lat']}, lon {box['min_lon']}-{box['max_lon']}\n")
 
+    mongodb_storage.save_incident_run(ctx, incidents)
+
     if not incidents:
         print("TomTom reports no incidents in this area right now.")
         return
@@ -37,6 +40,8 @@ def main():
 
     rows = [{**ctx, **{k: v for k, v in i.items() if k != "shape"}} for i in incidents]
     storage.save("incidents", rows)
+    saved = mongodb_storage.save("incidents", rows)
+    print(f"\nSaved {saved} incident snapshot(s) to MongoDB.")
     print(f"\n{len(incidents)} incident(s) saved to data/incidents_{ctx['run_time_ist'][:7]}.csv")
 
 if __name__ == "__main__":

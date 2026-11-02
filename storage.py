@@ -5,7 +5,7 @@ import config
 def save(kind, rows):
     if not rows:
         return
-    month = rows[0]["run_time_ist"][:7]  
+    month = rows[0]["run_time_ist"][:7]
     os.makedirs(config.DATA_DIR, exist_ok=True)
     path = os.path.join(config.DATA_DIR, f"{kind}_{month}.csv")
 
@@ -35,12 +35,3 @@ def _upgrade_file(path, old_columns, new_columns):
         writer.writeheader()
         writer.writerows(old_rows)
     return merged
-
-def has_rows_starting(kind, month, time_prefix):
-    # True if data/<kind>_<month>.csv already has a row whose run_time_ist starts with time_prefix,
-    # e.g. time_prefix "2026-10-17 18" = "anything saved during 6 pm on 17 Oct?"
-    path = os.path.join(config.DATA_DIR, f"{kind}_{month}.csv")
-    if not os.path.exists(path):
-        return False
-    with open(path, newline="", encoding="utf-8") as f:
-        return any(row.get("run_time_ist", "").startswith(time_prefix) for row in csv.DictReader(f))
