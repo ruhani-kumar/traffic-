@@ -29,7 +29,7 @@ def _get_json(url, params):
     return data
 
 def route(route, key, with_shape=False):
-    points = [route["start"], route["end"]]
+    points = [route["start"]] + ([route["via"]] if route.get("via") else []) + [route["end"]]
     coords = ":".join(f"{p['lat']},{p['lon']}" for p in points)
 
     params = {

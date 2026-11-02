@@ -2,3 +2,4 @@ requests
 python-dotenv
 tzdata
 folium
+holidays

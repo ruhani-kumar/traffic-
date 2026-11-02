@@ -11,6 +11,10 @@ except ImportError:
     pass
 MAP_FILE = os.path.join("maps", "routes_map.html")
 SAME_ROUTE_TOLERANCE = 0.10   
+# Background map. OpenStreetMap blocks maps opened as local files and CARTO now needs a key,
+# so we use Esri's free street map (it must be credited, hence the attribution text).
+MAP_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+MAP_ATTRIBUTION = "Tiles &copy; Esri"
 
 def speed_colour(current, free_flow):
     if not current or not free_flow:
@@ -24,8 +28,8 @@ def popup(title, lines):
 
 
 def draw_routes(m, mapbox_token, tomtom_key):
-    print(f"{'ROUTE':42} {'Mapbox km':>9} {'TomTom km':>9}  NOTE")
-    for route in config.ROUTES + config.CANDIDATE_ROUTES:
+    print(f"{'ROUTE':42} {'Mapbox km':>9} {'TomTom km':>9} {'ref km':>7}  NOTE")
+    for route in config.ROUTES:
         layer = folium.FeatureGroup(name=f"Route: {route['name']}")
         km = {}
 
@@ -54,21 +58,28 @@ def draw_routes(m, mapbox_token, tomtom_key):
         except RuntimeError as e:
             print(f"   ! TomTom failed for {route['name']}: {e}")
 
-        for spot, colour in (("start", "green"), ("end", "red")):
-            p = route[spot]
-            folium.CircleMarker((p["lat"], p["lon"]), radius=6, color=colour, fill=True, fill_opacity=1,
-                                tooltip=f"{route['name']} - {spot}").add_to(layer)
+        for spot, colour, size in (("start", "green", 6), ("via", "orange", 4), ("end", "red", 6)):
+            p = route.get(spot)
+            if p:
+                folium.CircleMarker((p["lat"], p["lon"]), radius=size, color=colour, fill=True, fill_opacity=1,
+                                    tooltip=f"{route['name']} - {spot}").add_to(layer)
         layer.add_to(m)
 
-        note = ""
+        notes = []
         if len(km) == 2 and abs(km["mapbox"] - km["tomtom"]) > SAME_ROUTE_TOLERANCE * max(km.values()):
-            note = "<- different paths? check on the map"
-        print(f"{route['name']:42} {km.get('mapbox', '-'):>9} {km.get('tomtom', '-'):>9}  {note}")
+            notes.append("Mapbox and TomTom took different paths - check map")
+        ref = route.get("ref_distance_km")
+        if ref and "tomtom" in km and abs(km["tomtom"] - ref) > config.ROUTE_CHANGE_TOLERANCE * ref:
+            notes.append(f"TomTom route is {km['tomtom']} km, expected {ref} km - route changed?")
+        if not ref and "tomtom" in km:
+            notes.append(f"no ref yet - if the map looks right, ref_distance_km = {km['tomtom']}")
+        print(f"{route['name']:42} {km.get('mapbox', '-'):>9} {km.get('tomtom', '-'):>9} "
+              f"{ref or '-':>7}  {' | '.join(notes)}")
 
 def draw_points(m, tomtom_key):
     layer = folium.FeatureGroup(name="Points (TomTom Traffic Flow)")
     print(f"\n{'POINT':26} {'speed':>5} {'normal':>6} {'snap m':>6}  NOTE")
-    for point in config.CANDIDATE_POINTS:
+    for point in config.LOCATIONS:
         here = (point["lat"], point["lon"])
         try:
             f = tomtom_api.location_flow(point, tomtom_key, with_shape=True)
@@ -118,6 +129,9 @@ def add_legend(m):
       <b>Routes</b><br>
       <span style="color:blue">&#9644;</span> Mapbox &nbsp;
       <span style="color:purple">- - -</span> TomTom<br>
+      <span style="color:green">&#9679;</span> start &nbsp;
+      <span style="color:orange">&#9679;</span> via &nbsp;
+      <span style="color:red">&#9679;</span> end<br>
       <b>Points</b> (road TomTom measured)<br>
       <span style="color:green">&#9644;</span> flowing &nbsp;
       <span style="color:orange">&#9644;</span> slow &nbsp;
@@ -132,7 +146,7 @@ def main():
     box = config.AREA_BOX
 
     m = folium.Map(location=((box["min_lat"] + box["max_lat"]) / 2, (box["min_lon"] + box["max_lon"]) / 2),
-                   zoom_start=14, tiles="OpenStreetMap")
+                   zoom_start=14, tiles=MAP_TILES, attr=MAP_ATTRIBUTION)
     folium.Rectangle([(box["min_lat"], box["min_lon"]), (box["max_lat"], box["max_lon"])],
                      color="gray", weight=1, dash_array="5", fill=False,
                      tooltip="Incident search area").add_to(m)

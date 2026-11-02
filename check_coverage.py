@@ -63,9 +63,9 @@ def run_test():
     mapbox_token = mapbox_api.get_token()
     tomtom_key = tomtom_api.get_key()
     ctx = context.get_run_context()
-    routes = config.ROUTES + config.CANDIDATE_ROUTES
+    routes = config.ROUTES
     route_rows = [test_route(r, mapbox_token, tomtom_key, ctx) for r in routes]
-    point_rows = [test_point(p, tomtom_key, ctx) for p in config.CANDIDATE_POINTS]
+    point_rows = [test_point(p, tomtom_key, ctx) for p in config.LOCATIONS]
     storage.save("coverage_routes", route_rows)
     storage.save("coverage_points", point_rows)
     print(f"\nTest run at {ctx['run_time_ist']} ({ctx['weekday']})\n")
